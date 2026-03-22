@@ -1,0 +1,32 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [vector]
+}
+
+model Movie {
+  id          Int      @id @default(autoincrement())
+  tmdbId      Int      @unique @map("tmdb_id")
+  title       String
+  year        Int?     @db.SmallInt
+  overview    String?
+  tagline     String?
+  genres      String[]
+  keywords    String[]
+  director    String?
+  cast        String[]
+  posterPath  String?  @map("poster_path")
+  rating      Decimal? @db.Decimal(3, 1)
+  voteCount   Int?     @map("vote_count")
+  metadata    Json?
+  embedding   Unsupported("vector(1536)")?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("movies")
+}
