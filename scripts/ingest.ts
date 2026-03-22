@@ -101,7 +101,7 @@ async function upsertMoviesWithEmbeddings(
       await prisma.$executeRaw`
         INSERT INTO movies (
           tmdb_id, title, year, overview, tagline,
-          genres, keywords, director, cast,
+          genres, keywords, director, "cast",
           poster_path, rating, vote_count, embedding
         )
         VALUES (
@@ -118,7 +118,7 @@ async function upsertMoviesWithEmbeddings(
           genres      = EXCLUDED.genres,
           keywords    = EXCLUDED.keywords,
           director    = EXCLUDED.director,
-          cast        = EXCLUDED.cast,
+          "cast"      = EXCLUDED."cast",
           poster_path = EXCLUDED.poster_path,
           rating      = EXCLUDED.rating,
           vote_count  = EXCLUDED.vote_count,

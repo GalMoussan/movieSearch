@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS movies (
   genres      TEXT[],
   keywords    TEXT[],
   director    TEXT,
-  cast        TEXT[],
+  "cast"      TEXT[],
   poster_path TEXT,
   rating      NUMERIC(3,1),
   vote_count  INTEGER,
