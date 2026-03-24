@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { RankedResult, SearchResult } from "@/types";
+import type { ActivePersona } from "@/lib/personas";
+import { buildRerankSystemPrompt } from "@/lib/search";
 
 export const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -23,7 +25,8 @@ Rules:
 
 export async function rerankMovies(
   query: string,
-  candidates: SearchResult[]
+  candidates: SearchResult[],
+  personas?: ActivePersona[]
 ): Promise<RankedResult[]> {
   const candidateList = candidates
     .map(
@@ -32,17 +35,28 @@ export async function rerankMovies(
     )
     .join("\n");
 
-  const message = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1500,
-    system: RERANK_SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: `Query: "${query}"\n\nCandidates:\n${candidateList}`,
-      },
-    ],
-  });
+  const systemPrompt = personas && personas.length > 0
+    ? buildRerankSystemPrompt(personas)
+    : RERANK_SYSTEM_PROMPT;
+
+  const RERANK_TIMEOUT_MS = 12_000;
+
+  const message = await Promise.race([
+    anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1500,
+      system: systemPrompt,
+      messages: [
+        {
+          role: "user",
+          content: `Query: "${query}"\n\nCandidates:\n${candidateList}`,
+        },
+      ],
+    }),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("rerank timeout")), RERANK_TIMEOUT_MS)
+    ),
+  ]);
 
   const text = message.content
     .filter((block) => block.type === "text")
@@ -50,14 +64,23 @@ export async function rerankMovies(
     .join("");
 
   try {
-    const parsed = JSON.parse(text) as { ranked: RankedResult[] };
-    return parsed.ranked ?? [];
+    const parsed = JSON.parse(text) as { ranked?: RankedResult[] };
+    if (!Array.isArray(parsed.ranked)) {
+      console.warn("[rerank] unexpected response shape:", text.slice(0, 200));
+      return [];
+    }
+    return parsed.ranked;
   } catch {
     const match = text.match(/\{[\s\S]*\}/);
     if (match) {
-      const parsed = JSON.parse(match[0]) as { ranked: RankedResult[] };
-      return parsed.ranked ?? [];
+      try {
+        const parsed = JSON.parse(match[0]) as { ranked?: RankedResult[] };
+        return Array.isArray(parsed.ranked) ? parsed.ranked : [];
+      } catch {
+        // fall through
+      }
     }
+    console.warn("[rerank] failed to parse Claude response:", text.slice(0, 200));
     return [];
   }
 }

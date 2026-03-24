@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { embedText } from "@/lib/openai";
 import { rerankMovies } from "@/lib/anthropic";
+import { blendQueryVector } from "@/lib/persona-embeddings";
+import { vectorSearch } from "@/lib/search";
 import { SearchRequestSchema } from "@/types";
 import type { SearchResult, SearchResponse } from "@/types";
-
-const VECTOR_CANDIDATES = 50;
-const MIN_VOTE_COUNT = 50;
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   // 1. Parse + validate input
@@ -25,80 +23,42 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const { query } = parsed.data;
+  const { query, personas } = parsed.data;
   const useRerank =
     req.nextUrl.searchParams.get("rerank") !== "false" &&
-    (process.env.RERANK_BY_DEFAULT ?? "true") === "true";
+    process.env.RERANK_BY_DEFAULT !== "false";
 
   try {
     // 2. Embed the query
-    const queryEmbedding = await embedText(query);
-    const embeddingStr = `[${queryEmbedding.join(",")}]`;
+    let queryEmbedding = await embedText(query);
 
-    // 3. Vector search — cosine similarity via pgvector
-    type RawMovie = {
-      id: number;
-      tmdb_id: number;
-      title: string;
-      year: number | null;
-      overview: string | null;
-      poster_path: string | null;
-      rating: number | null;
-      vote_count: number | null;
-      similarity: number;
-    };
+    // 3. Blend embedding with active personas (if any)
+    const activePersonas = personas?.filter((p) => p.weight > 0) ?? [];
+    if (activePersonas.length > 0) {
+      queryEmbedding = await blendQueryVector(queryEmbedding, activePersonas);
+    }
 
-    const candidates = await prisma.$queryRaw<RawMovie[]>`
-      SELECT
-        id,
-        tmdb_id,
-        title,
-        year,
-        overview,
-        poster_path,
-        rating,
-        vote_count,
-        1 - (embedding <=> ${embeddingStr}::vector) AS similarity
-      FROM movies
-      WHERE vote_count > ${MIN_VOTE_COUNT}
-        AND embedding IS NOT NULL
-      ORDER BY embedding <=> ${embeddingStr}::vector
-      LIMIT ${VECTOR_CANDIDATES}
-    `;
+    // 4. Vector search via pgvector
+    const searchResults = await vectorSearch(queryEmbedding);
 
-    if (candidates.length === 0) {
+    if (searchResults.length === 0) {
       const response: SearchResponse = { results: [], query, count: 0 };
       return NextResponse.json(response);
     }
 
-    // Normalize raw DB results to SearchResult shape
-    const searchResults: SearchResult[] = candidates.map((m) => ({
-      id: m.id,
-      tmdbId: m.tmdb_id,
-      title: m.title,
-      year: m.year,
-      overview: m.overview,
-      posterPath: m.poster_path,
-      rating: m.rating ? Number(m.rating) : null,
-      voteCount: m.vote_count,
-      similarity: Number(m.similarity),
-    }));
-
-    // 4. Optional Claude re-rank
+    // 5. Optional Claude re-rank
     if (useRerank) {
-      const reranked = await rerankMovies(query, searchResults);
+      const reranked = await rerankMovies(query, searchResults, activePersonas);
 
       if (reranked.length > 0) {
         // Merge re-rank scores/reasons into results
         const idToResult = new Map(searchResults.map((r) => [r.id, r]));
 
-        const merged: SearchResult[] = reranked
-          .map((r) => {
-            const base = idToResult.get(r.id);
-            if (!base) return null;
-            return { ...base, score: r.score, reason: r.reason };
-          })
-          .filter((r): r is SearchResult => r !== null);
+        const merged: SearchResult[] = [];
+        for (const r of reranked) {
+          const base = idToResult.get(r.id);
+          if (base) merged.push({ ...base, score: r.score, reason: r.reason });
+        }
 
         const response: SearchResponse = {
           results: merged,

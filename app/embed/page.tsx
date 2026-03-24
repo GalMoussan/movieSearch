@@ -12,7 +12,7 @@ import { useSearch } from "@/hooks/useSearch";
 import type { ActivePersona } from "@/lib/personas";
 import type { SearchResult } from "@/types";
 
-export default function HomePage() {
+export default function EmbedPage() {
   const { search, results, status, statusMessage } = useSearch();
   const [activePersonas, setActivePersonas] = useState<ActivePersona[]>([]);
   const [selectedMovie, setSelectedMovie] = useState<SearchResult | null>(null);
@@ -50,7 +50,7 @@ export default function HomePage() {
         }
         @media (max-width: 580px) {
           .results-grid { grid-template-columns: 1fr !important; }
-          .page-root { padding-left: 24px !important; padding-right: 24px !important; }
+          .page-root { padding-left: 16px !important; padding-right: 16px !important; }
         }
         @media (max-width: 760px) {
           .persona-grid { grid-template-columns: repeat(2, 1fr) !important; }
@@ -72,54 +72,9 @@ export default function HomePage() {
           color: "#e8e0d0",
           fontFamily: "Georgia, serif",
           maxWidth: "none",
-          padding: "60px 48px 80px",
+          padding: "2rem 1rem",
         }}
       >
-        {/* Header */}
-        <div style={{ marginBottom: 52, animation: "fadeSlideIn 0.6s ease both" }}>
-          <div
-            style={{
-              fontFamily: "'Courier New', monospace",
-              fontSize: 10,
-              color: "#c8a832",
-              letterSpacing: "0.3em",
-              textTransform: "uppercase",
-              marginBottom: 10,
-            }}
-          >
-            ◈ CINEMAQUERY v0.2
-          </div>
-          <h1
-            style={{
-              fontFamily: "var(--font-playfair), Georgia, serif",
-              fontSize: "clamp(36px, 7vw, 58px)",
-              fontWeight: 900,
-              lineHeight: 1.05,
-              letterSpacing: "-0.02em",
-              color: "#e8e0d0",
-              marginBottom: 14,
-            }}
-          >
-            Search Cinema
-            <br />
-            <span style={{ color: "#c8a832", fontStyle: "italic" }}>
-              by feeling.
-            </span>
-          </h1>
-          <p
-            style={{
-              fontFamily: "'Courier New', monospace",
-              fontSize: 13,
-              color: "#888",
-              lineHeight: 1.7,
-              maxWidth: 420,
-            }}
-          >
-            Describe a mood, a vibe, a half-remembered concept. The archive
-            will find the film.
-          </p>
-        </div>
-
         {/* Persona Mixer */}
         <PersonaMixer onChange={setActivePersonas} />
 
@@ -228,23 +183,6 @@ export default function HomePage() {
             the archive found no match for this feeling.
           </div>
         )}
-
-        {/* Footer */}
-        <div
-          style={{
-            marginTop: 80,
-            paddingTop: 24,
-            borderTop: "1px solid #111",
-            fontFamily: "'Courier New', monospace",
-            fontSize: 10,
-            color: "#444",
-            display: "flex",
-            justifyContent: "space-between",
-          }}
-        >
-          <span>DATA: TMDB · EMBEDDINGS: OPENAI · REASONING: CLAUDE</span>
-          <span>SEMANTIC SEARCH ENGINE</span>
-        </div>
       </div>
 
       {/* Modal */}

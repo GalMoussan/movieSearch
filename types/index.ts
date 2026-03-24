@@ -2,13 +2,20 @@ import { z } from "zod";
 
 // ─── API Schemas ──────────────────────────────────────────────────────────────
 
+export const ActivePersonaSchema = z.object({
+  id: z.string(),
+  weight: z.number().min(0).max(100),
+});
+
 export const SearchRequestSchema = z.object({
   query: z.string().min(1, "Query cannot be empty").max(500, "Query too long"),
+  personas: z.array(ActivePersonaSchema).max(3).optional(),
 });
 
 export const SearchResultSchema = z.object({
   id: z.number(),
   tmdbId: z.number(),
+  imdbId: z.string().nullable(),
   title: z.string(),
   year: z.number().nullable(),
   overview: z.string().nullable(),

@@ -2,6 +2,7 @@ import type { TMDBMovieDetails, TMDBCredits, TMDBKeywords } from "@/lib/tmdb";
 
 export interface EnrichedMovie {
   tmdbId: number;
+  imdbId: string | null;
   title: string;
   year: number | null;
   overview: string | null;
@@ -36,6 +37,7 @@ export function buildEnrichedMovie(
 
   return {
     tmdbId: details.id,
+    imdbId: details.imdb_id || null,
     title: details.title,
     year,
     overview: details.overview || null,

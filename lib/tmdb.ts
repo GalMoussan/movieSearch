@@ -44,6 +44,7 @@ export interface TMDBDiscoverResult {
 
 export interface TMDBMovieDetails {
   id: number;
+  imdb_id: string | null;
   title: string;
   overview: string;
   tagline: string;

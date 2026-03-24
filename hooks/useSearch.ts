@@ -2,12 +2,18 @@
 
 import { useMutation } from "@tanstack/react-query";
 import type { SearchResponse } from "@/types";
+import type { ActivePersona } from "@/lib/personas";
 
-async function searchMovies(query: string): Promise<SearchResponse> {
+interface SearchParams {
+  query: string;
+  personas?: ActivePersona[];
+}
+
+async function searchMovies({ query, personas }: SearchParams): Promise<SearchResponse> {
   const res = await fetch("/api/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, personas }),
   });
 
   if (!res.ok) {
@@ -44,8 +50,12 @@ export function useSearch() {
           ? (mutation.error?.message ?? "something broke in the projection booth.")
           : "";
 
+  function search(query: string, personas?: ActivePersona[]) {
+    mutation.mutate({ query, personas });
+  }
+
   return {
-    search: mutation.mutate,
+    search,
     results: mutation.data?.results ?? [],
     status,
     statusMessage,

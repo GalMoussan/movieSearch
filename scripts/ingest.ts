@@ -100,17 +100,18 @@ async function upsertMoviesWithEmbeddings(
 
       await prisma.$executeRaw`
         INSERT INTO movies (
-          tmdb_id, title, year, overview, tagline,
+          tmdb_id, imdb_id, title, year, overview, tagline,
           genres, keywords, director, "cast",
           poster_path, rating, vote_count, embedding
         )
         VALUES (
-          ${m.tmdbId}, ${m.title}, ${m.year}, ${m.overview}, ${m.tagline},
+          ${m.tmdbId}, ${m.imdbId}, ${m.title}, ${m.year}, ${m.overview}, ${m.tagline},
           ${m.genres}::text[], ${m.keywords}::text[], ${m.director}, ${m.cast}::text[],
           ${m.posterPath}, ${m.rating}, ${m.voteCount},
           ${embeddingStr}::vector
         )
         ON CONFLICT (tmdb_id) DO UPDATE SET
+          imdb_id     = EXCLUDED.imdb_id,
           title       = EXCLUDED.title,
           year        = EXCLUDED.year,
           overview    = EXCLUDED.overview,
@@ -168,10 +169,11 @@ async function main() {
     const candidates = pageData.results;
     if (candidates.length === 0) break;
 
-    // Resume support: skip already-ingested movies
-    const tmdbIds = candidates.map((m) => m.id);
-    const existingIds = await getExistingTmdbIds(tmdbIds);
-    const toProcess = candidates.filter((m) => !existingIds.has(m.id));
+    // Re-ingestion mode: process all movies to populate imdb_id
+    const toProcess = candidates;
+    // const tmdbIds = candidates.map((m) => m.id);
+    // const existingIds = await getExistingTmdbIds(tmdbIds);
+    // const toProcess = candidates.filter((m) => !existingIds.has(m.id));
 
     if (toProcess.length === 0) {
       process.stdout.write(`  Page ${currentPage}/${totalPages}: all ${candidates.length} already ingested, skipping\n`);
