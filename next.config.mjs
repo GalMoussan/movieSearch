@@ -17,11 +17,11 @@ const nextConfig = {
         headers: [
           {
             key: "X-Frame-Options",
-            value: "ALLOW-FROM https://galmoussan.vercel.app",
+            value: "ALLOW-FROM https://www.galmoussan.com",
           },
           {
             key: "Content-Security-Policy",
-            value: "frame-ancestors 'self' https://galmoussan.vercel.app",
+            value: "frame-ancestors 'self' https://www.galmoussan.com https://galmoussan.com",
           },
         ],
       },
