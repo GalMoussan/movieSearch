@@ -300,6 +300,8 @@ export default function MovieModal({ result, onClose }: MovieModalProps) {
             {imdbId && (
               <a
                 href={`stremio://movie/${imdbId}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
