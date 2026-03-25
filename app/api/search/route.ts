@@ -78,8 +78,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json(response);
   } catch (err) {
     console.error("[/api/search] Error:", err);
-    const message =
-      err instanceof Error ? err.message : "Internal server error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Search failed. Please try again." },
+      { status: 500 }
+    );
   }
 }
